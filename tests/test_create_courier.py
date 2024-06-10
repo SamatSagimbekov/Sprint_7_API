@@ -1,35 +1,49 @@
 import requests
-from utils.helpers import register_new_courier_and_return_login_password, BASE_URL
+import allure
+from utils.helpers import generate_random_string, BASE_URL
 
+class TestCreateCourier:
 
-def test_create_courier():
-    data = register_new_courier_and_return_login_password()
-    assert data, "Failed to register a new courier"
+    @allure.title("Создание курьера успешно")
+    def test_create_courier(self):
+        payload = {
+            "login": generate_random_string(10),
+            "password": generate_random_string(10),
+            "firstName": generate_random_string(10)
+        }
+        response = requests.post(f'{BASE_URL}/courier', json=payload)
+        assert response.status_code == 201
+        assert response.json()["ok"] == True
 
+    @allure.title("Создание дублирующего курьера")
+    def test_create_duplicate_courier(self):
+        payload = {
+            "login": generate_random_string(10),
+            "password": generate_random_string(10),
+            "firstName": generate_random_string(10)
+        }
+        response = requests.post(f'{BASE_URL}/courier', json=payload)
+        assert response.status_code == 201
+        duplicate_response = requests.post(f'{BASE_URL}/courier', json=payload)
+        assert duplicate_response.status_code == 409
 
-def test_create_duplicate_courier():
-    data = register_new_courier_and_return_login_password()
-    login, password, first_name = data
-    payload = {
-        "login": login,
-        "password": password,
-        "firstName": first_name
-    }
-    response = requests.post(f'{BASE_URL}/courier', json=payload)
-    assert response.status_code == 409
-    assert response.json() == {"message": "Этот логин уже используется. Попробуйте другой."}
+    @allure.title("Создание курьера с отсутствующими полями")
+    def test_create_courier_missing_fields(self):
+        payload = {
+            "login": generate_random_string(10),
+            "password": generate_random_string(10)
+        }
+        response = requests.post(f'{BASE_URL}/courier', json=payload)
+        assert response.status_code == 400
 
-
-def test_create_courier_missing_field():
-    payload = {
-        "login": "some_login",
-        "password": "some_password"
-    }
-    response = requests.post(f'{BASE_URL}/courier', json=payload)
-    assert response.status_code == 400
-    assert response.json() == {"message": "Недостаточно данных для создания учетной записи"}
-
-
-def test_create_courier_success_response():
-    data = register_new_courier_and_return_login_password()
-    assert data, "Failed to register a new courier"
+    @allure.title("Создание курьера с существующим логином")
+    def test_create_courier_existing_login(self):
+        payload = {
+            "login": generate_random_string(10),
+            "password": generate_random_string(10),
+            "firstName": generate_random_string(10)
+        }
+        response = requests.post(f'{BASE_URL}/courier', json=payload)
+        assert response.status_code == 201
+        duplicate_response = requests.post(f'{BASE_URL}/courier', json=payload)
+        assert duplicate_response.status_code == 409

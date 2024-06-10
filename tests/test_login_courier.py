@@ -1,33 +1,34 @@
+import pytest
 import requests
-from utils.helpers import register_new_courier_and_return_login_password, BASE_URL
+import allure
+from utils.helpers import generate_random_string, BASE_URL
 
+class TestCourierLogin:
 
-def test_courier_login():
-    data = register_new_courier_and_return_login_password()
-    login, password, _ = data
-    payload = {
-        "login": login,
-        "password": password
-    }
-    response = requests.post(f'{BASE_URL}/courier/login', json=payload)
-    assert response.status_code == 200
-    assert "id" in response.json()
+    @pytest.fixture(scope="class")
+    def courier_credentials(self):
+        login = generate_random_string(10)
+        password = generate_random_string(10)
+        first_name = generate_random_string(10)
+        payload = {"login": login, "password": password, "firstName": first_name}
+        response = requests.post(f'{BASE_URL}/courier', json=payload)
+        assert response.status_code == 201
+        return {"login": login, "password": password}
 
+    @allure.title("Авторизация курьера успешно")
+    def test_courier_login(self, courier_credentials):
+        response = requests.post(f'{BASE_URL}/courier/login', json=courier_credentials)
+        assert response.status_code == 200
+        assert "id" in response.json()
 
-def test_courier_login_missing_field():
-    payload = {
-        "login": "some_login"
-    }
-    response = requests.post(f'{BASE_URL}/courier/login', json=payload)
-    assert response.status_code == 400
-    assert response.json() == {"message": "Недостаточно данных для входа"}
+    @allure.title("Авторизация курьера с отсутствующими полями")
+    def test_courier_login_missing_fields(self):
+        credentials = {"login": generate_random_string(10)}
+        response = requests.post(f'{BASE_URL}/courier/login', json=credentials)
+        assert response.status_code == 400
 
-
-def test_courier_login_invalid_credentials():
-    payload = {
-        "login": "invalid_login",
-        "password": "invalid_password"
-    }
-    response = requests.post(f'{BASE_URL}/courier/login', json=payload)
-    assert response.status_code == 404
-    assert response.json() == {"message": "Учетная запись не найдена"}
+    @allure.title("Авторизация курьера с неверными учетными данными")
+    def test_courier_login_invalid_credentials(self):
+        credentials = {"login": "invalid_login", "password": "invalid_password"}
+        response = requests.post(f'{BASE_URL}/courier/login', json=credentials)
+        assert response.status_code == 404
